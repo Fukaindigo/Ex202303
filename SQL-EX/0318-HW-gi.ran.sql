@@ -79,3 +79,42 @@ WHERE g.no IN (SELECT no FROM generals WHERE owner IN
 --直接筛除掉了不符合条件的武将信息
 
 ORDER BY p.no,五囲 DESC;
+
+WITH grouped_table AS (
+  SELECT
+    no,
+    monarch,
+    name,
+    fiveData,
+    control,
+    power,
+    intelligence,
+    politics,
+    glamour,
+    ROW_NUMBER() OVER (
+      PARTITION BY monarch
+      ORDER BY fiveData DESC) row_num
+  FROM (
+    select p.no as no, p.monarch as monarch, g.name as name, g.status as status, g.control + g.power + g.intelligence + g.politics + g.glamour as fiveData,
+    g.control as control, g.power as power, g.intelligence as intelligence, g.politics as politics, g.glamour as glamour
+    from generals g
+    inner join city c
+    on g.owner = c.name
+    inner join political p
+    on c.monarch_no = p.no
+    and g.status not in ('未登場', '未発見', '在野', '死亡')
+  ) AS tempTable
+)
+SELECT
+  no as '勢力番号',
+  monarch as '君主',
+  name as '武将名',
+  fiveData as '五囲',
+  control as '統御',
+  power as '武力',
+  intelligence as '智力',
+  politics as '政治',
+  glamour as '魅力'
+FROM grouped_table
+WHERE row_num <= 5
+order by no, row_num
